@@ -15,7 +15,7 @@ The library branch also carries `fix/ca-heated-wheel-and-seats`
 |---|---|---|---|
 | Steering wheel level | `steerWheelHeat_step2`, `sideBackWindowHeat` in climate start | `steering_wheel` field of `start_climate` | Live: High and Low reported back |
 | Seat / wheel status | `seatHeaterVentInfo`, `steerWheelHeat_step2` | seat sensors, `steering_wheel_heat_step` | Live |
-| Departure climate schedules | read: `lstvhclsts` `reservChargeInfos`; write: `v2/rc/ev/reshvacset` | existing departure switches/time sensors, `schedule_charging_and_climate` | Read: live. Write: body from portal, not yet sent |
+| Departure climate schedules | read: `lstvhclsts` `reservChargeInfos`; write: `v2/rc/ev/reshvacset` | existing departure switches/time sensors, `schedule_charging_and_climate` | Read: live. Write: body matches portal exactly; the EV9 fails it (see below) |
 | Valet mode | `valet/activate`, `valet/deactivate`, `valet/lastvaletstatus` | existing valet switch and buttons | Status read: live. Commands: body inferred (portal registers but never calls them) |
 | Next/last service date, interval | `nxtsvc` | `next_service_date`, `last_service_date` sensors | Live |
 | Reset service reminder | `svcodmt` | `kia_uvo.set_last_service` | Body from portal |
@@ -26,6 +26,7 @@ The library branch also carries `fix/ca-heated-wheel-and-seats`
 | Notices / notification history | `ntcmsgcnt`, `v2/ntfhst` | `unread_message_count` sensor (+ last 10 notifications) | Live |
 | Digital key | `dkc/dkeystatus` (GET) | `digital_key_activated` binary sensor | Live |
 | Kia Connect plan | `billing/retrieve/account/overview` (GET), `vhcllst` | `connect_plan_type`, `connect_subscription_end_date` sensors | Live |
+| Charge limits (CCS2) | `v2/ev/reserv/socset` (`targetSOClist`) for Gen3 cars, `evc/setsoc` otherwise | existing charge-limit numbers | Live: socset completes; setsoc rejected (7999) on the EV9 |
 | Status extras | `smartKeyBatteryWarning`, `engineOilStatus`, `batterySoh`, `dischargingLimit` | existing sensors now populated | Live |
 
 Account data (valet status, dealer, notices, digital key, plan, presets,
@@ -43,6 +44,15 @@ vehicle update.
   it isn't a portal endpoint.
 
 ## Known limits
+
+- Schedule writes fail on the 2026 EV9 (CCS2, G3). A capture of
+  kiaconnect.ca's own Departure **Submit** (2026-11-21) sent the same body the
+  library sends and failed the same way: request accepted, then the vehicle
+  transaction fails within a second (`RMT-E0209` departures, `RMT-E0208`
+  charge window, status `7999`), even for an unchanged schedule and for a
+  slot-1-only body. No CCS2 variant exists under `v2/ev/reserv/` (404). The
+  Kia app likely uses a different API for CCS2 schedules. HA reports the
+  failed action.
 
 - Canada rejects a remote climate start with climate off (`airCtrl: 0`,
   action status 6514). Seats and the wheel only run with climate on.
