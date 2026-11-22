@@ -34,7 +34,7 @@ from hyundai_kia_connect_api import (
     VehicleManager,
     WindowRequestOptions,
 )
-from hyundai_kia_connect_api.const import WINDOW_STATE
+from hyundai_kia_connect_api.const import ORDER_STATUS, WINDOW_STATE
 from hyundai_kia_connect_api.exceptions import (
     APIError,
     AuthenticationError,
@@ -415,11 +415,11 @@ class HyundaiKiaConnectDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any
 
     async def async_await_action_and_refresh(
         self, vehicle_id: str, action_id: str
-    ) -> None:
+    ) -> ORDER_STATUS | None:
         """Wait for a vehicle action to complete, then refresh the cached data."""
         try:
             await asyncio.sleep(5)
-            await self.hass.async_add_executor_job(
+            return await self.hass.async_add_executor_job(
                 self.vehicle_manager.check_action_status,
                 vehicle_id,
                 action_id,
@@ -431,7 +431,7 @@ class HyundaiKiaConnectDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any
 
     async def async_await_action_and_force_refresh(
         self, vehicle_id: str, action_id: str
-    ) -> None:
+    ) -> ORDER_STATUS | None:
         """Wait for action then force refresh to get fresh vehicle data.
 
         Used after setting charge limits because the soft refresh (cmm/gvi)
@@ -445,7 +445,7 @@ class HyundaiKiaConnectDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any
         """
         try:
             await asyncio.sleep(5)
-            await self.hass.async_add_executor_job(
+            return await self.hass.async_add_executor_job(
                 self.vehicle_manager.check_action_status,
                 vehicle_id,
                 action_id,
@@ -466,9 +466,9 @@ class HyundaiKiaConnectDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any
     ) -> Any:
         """Call a kiaconnect.ca-only API method (presets, service reset, ...).
 
-        These are account/settings writes, not remote vehicle commands, so
-        there is no action status to wait for; the vehicle data is refreshed
-        from the cache afterwards.
+        Methods that return a transaction id are vehicle transactions: wait
+        for the result like other commands and raise if the car rejects it.
+        Plain account writes just refresh the cached data.
         """
         api = self.vehicle_manager.api
         fn = getattr(api, method, None)
@@ -483,6 +483,11 @@ class HyundaiKiaConnectDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any
         )
         if vehicle.data is not None:
             vehicle.data.pop("_ca_extras_at", None)  # re-read account data now
+        if isinstance(result, str) and result:
+            # A transaction id (e.g. svcodmt): kiaconnect.ca waits for the car
+            status = await self.async_await_action_and_refresh(vehicle_id, result)
+            self._raise_if_action_failed(status, method)
+            return result
         await self.async_request_refresh()
         return result
 
@@ -520,18 +525,34 @@ class HyundaiKiaConnectDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any
                 ) from err
             except Exception as err:
                 raise HomeAssistantError(f"Failed to {error_label}: {err}") from err
+            status: ORDER_STATUS | None = None
             try:
                 if force_refresh:
-                    await self.async_await_action_and_force_refresh(
+                    status = await self.async_await_action_and_force_refresh(
                         vehicle_id, action_id
                     )
                 else:
-                    await self.async_await_action_and_refresh(vehicle_id, action_id)
+                    status = await self.async_await_action_and_refresh(
+                        vehicle_id, action_id
+                    )
             except Exception:
                 _LOGGER.exception(
                     "Action '%s' was sent but confirmation polling failed",
                     error_label,
                 )
+            self._raise_if_action_failed(status, error_label)
+
+    @staticmethod
+    def _raise_if_action_failed(status: ORDER_STATUS | None, label: str) -> None:
+        """Surface a vehicle-side rejection; a slow car only logs a warning."""
+        if status == ORDER_STATUS.FAILED:
+            raise HomeAssistantError(f"The vehicle rejected '{label}'")
+        if status in (ORDER_STATUS.PENDING, ORDER_STATUS.TIMEOUT):
+            _LOGGER.warning(
+                "Action '%s' was sent but the vehicle has not confirmed it (%s)",
+                label,
+                status.name,
+            )
 
     async def async_lock_vehicle(self, vehicle_id: str) -> None:
         """Lock the vehicle."""

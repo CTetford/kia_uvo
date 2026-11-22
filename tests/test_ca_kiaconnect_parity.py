@@ -93,3 +93,42 @@ async def test_ca_account_call_other_regions() -> None:
         await HyundaiKiaConnectDataUpdateCoordinator.async_ca_account_call(
             coordinator, "v1", "set_monthly_report_day", 15
         )
+
+
+async def test_ca_account_call_waits_for_transaction() -> None:
+    from hyundai_kia_connect_api.const import ORDER_STATUS
+
+    vehicle = _vehicle()
+    api = MagicMock()
+    api.set_last_service.return_value = "TX-9"
+    coordinator = MagicMock()
+    coordinator.vehicle_manager.api = api
+    coordinator.vehicle_manager.get_vehicle.return_value = vehicle
+    coordinator.async_check_and_refresh_token = AsyncMock()
+
+    async def run(fn):
+        return fn()
+
+    coordinator.hass.async_add_executor_job = AsyncMock(side_effect=run)
+    coordinator._raise_if_action_failed = (
+        HyundaiKiaConnectDataUpdateCoordinator._raise_if_action_failed
+    )
+    coordinator.async_await_action_and_refresh = AsyncMock(
+        return_value=ORDER_STATUS.FAILED
+    )
+    with pytest.raises(HomeAssistantError, match="rejected"):
+        await HyundaiKiaConnectDataUpdateCoordinator.async_ca_account_call(
+            coordinator, "v1", "set_last_service", 1.0, dt.date(2026, 3, 27)
+        )
+    coordinator.async_await_action_and_refresh.assert_awaited_once_with("v1", "TX-9")
+
+
+def test_failed_action_raises_and_pending_only_warns() -> None:
+    from hyundai_kia_connect_api.const import ORDER_STATUS
+
+    check = HyundaiKiaConnectDataUpdateCoordinator._raise_if_action_failed
+    with pytest.raises(HomeAssistantError):
+        check(ORDER_STATUS.FAILED, "start climate")
+    check(ORDER_STATUS.PENDING, "start climate")
+    check(ORDER_STATUS.SUCCESS, "start climate")
+    check(None, "start climate")
