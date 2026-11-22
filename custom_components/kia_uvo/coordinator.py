@@ -461,6 +461,31 @@ class HyundaiKiaConnectDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any
                 _LOGGER.exception("Force refresh after call failed")
             self.async_set_updated_data(self.data)
 
+    async def async_ca_account_call(
+        self, vehicle_id: str, method: str, *args: Any
+    ) -> Any:
+        """Call a kiaconnect.ca-only API method (presets, service reset, ...).
+
+        These are account/settings writes, not remote vehicle commands, so
+        there is no action status to wait for; the vehicle data is refreshed
+        from the cache afterwards.
+        """
+        api = self.vehicle_manager.api
+        fn = getattr(api, method, None)
+        if fn is None:
+            raise HomeAssistantError(
+                f"{method} is only available for Kia/Hyundai/Genesis Canada"
+            )
+        await self.async_check_and_refresh_token()
+        vehicle = self.vehicle_manager.get_vehicle(vehicle_id)
+        result = await self.hass.async_add_executor_job(
+            partial(fn, self.vehicle_manager.token, vehicle, *args)
+        )
+        if vehicle.data is not None:
+            vehicle.data.pop("_ca_extras_at", None)  # re-read account data now
+        await self.async_request_refresh()
+        return result
+
     async def _async_send_action(
         self,
         vehicle_id: str,

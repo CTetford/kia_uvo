@@ -330,6 +330,50 @@ SENSOR_DESCRIPTIONS: Final[tuple[HyundaiKiaSensorEntityDescription, ...]] = (
         icon="mdi:alert-circle",
     ),
     HyundaiKiaSensorEntityDescription(
+        key="next_service_date",
+        translation_key="next_service_date",
+        icon="mdi:calendar-wrench",
+        device_class=SensorDeviceClass.DATE,
+    ),
+    HyundaiKiaSensorEntityDescription(
+        key="last_service_date",
+        translation_key="last_service_date",
+        icon="mdi:calendar-check",
+        device_class=SensorDeviceClass.DATE,
+        entity_category=EntityCategory.DIAGNOSTIC,
+    ),
+    HyundaiKiaSensorEntityDescription(
+        key="connect_subscription_end_date",
+        translation_key="connect_subscription_end_date",
+        icon="mdi:calendar-end",
+        device_class=SensorDeviceClass.DATE,
+        entity_category=EntityCategory.DIAGNOSTIC,
+    ),
+    HyundaiKiaSensorEntityDescription(
+        key="connect_plan_type",
+        translation_key="connect_plan_type",
+        icon="mdi:card-account-details",
+        entity_category=EntityCategory.DIAGNOSTIC,
+    ),
+    HyundaiKiaSensorEntityDescription(
+        key="preferred_dealer_name",
+        translation_key="preferred_dealer_name",
+        icon="mdi:store",
+        entity_category=EntityCategory.DIAGNOSTIC,
+    ),
+    HyundaiKiaSensorEntityDescription(
+        key="unread_message_count",
+        translation_key="unread_message_count",
+        icon="mdi:message-badge",
+        state_class=SensorStateClass.MEASUREMENT,
+    ),
+    HyundaiKiaSensorEntityDescription(
+        key="monthly_report_day",
+        translation_key="monthly_report_day",
+        icon="mdi:calendar-month",
+        entity_category=EntityCategory.DIAGNOSTIC,
+    ),
+    HyundaiKiaSensorEntityDescription(
         key="ev_first_departure_time",
         translation_key="ev_first_departure_time",
         icon="mdi:clock-outline",
@@ -829,6 +873,18 @@ class HyundaiKiaConnectSensor(RestoreSensor, SensorEntity, HyundaiKiaConnectEnti
             return {"address": self.vehicle._geocode_address}
         elif self.entity_description.key == "dtc_count":
             return {"DTC Text": self.vehicle.dtc_descriptions}
+        data = self.vehicle.data or {}
+        if self.entity_description.key == "preferred_dealer_name":
+            dealer = data.get("preferred_dealer") or {}
+            return {
+                key: dealer.get(key)
+                for key in ("dealerCode", "fullAddress", "tel", "webSite")
+                if dealer.get(key)
+            }
+        if self.entity_description.key == "unread_message_count":
+            return {"notifications": (data.get("notifications") or [])[:10]}
+        if self.entity_description.key == "connect_plan_type":
+            return {"status": self.vehicle.connect_plan_status}
         return {}
 
 

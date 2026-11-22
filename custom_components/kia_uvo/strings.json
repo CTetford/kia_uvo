@@ -306,6 +306,27 @@
           "locking": "Locking",
           "released": "Released"
         }
+      },
+      "next_service_date": {
+        "name": "Next service date"
+      },
+      "last_service_date": {
+        "name": "Last service date"
+      },
+      "connect_subscription_end_date": {
+        "name": "Kia Connect subscription end"
+      },
+      "connect_plan_type": {
+        "name": "Kia Connect plan"
+      },
+      "preferred_dealer_name": {
+        "name": "Preferred dealer"
+      },
+      "unread_message_count": {
+        "name": "Unread Kia messages"
+      },
+      "monthly_report_day": {
+        "name": "Monthly report day"
       }
     },
     "binary_sensor": {
@@ -533,6 +554,9 @@
       },
       "battery_auxiliary_fail_warning_is_on": {
         "name": "12V Battery Fault"
+      },
+      "digital_key_activated": {
+        "name": "Digital key activated"
       }
     },
     "lock": {

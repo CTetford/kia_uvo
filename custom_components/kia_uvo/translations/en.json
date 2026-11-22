@@ -401,6 +401,138 @@
           "description": "Target vehicle"
         }
       }
+    },
+    "set_last_service": {
+      "name": "Set last service (Canada)",
+      "description": "Reset the service reminder with the odometer and date of the last service (kiaconnect.ca).",
+      "fields": {
+        "device_id": {
+          "name": "Vehicle",
+          "description": "Target vehicle"
+        },
+        "odometer": {
+          "name": "Odometer",
+          "description": "Odometer at the last service, in the account's unit."
+        },
+        "date": {
+          "name": "Date",
+          "description": "Service date. Defaults to today."
+        }
+      }
+    },
+    "set_vehicle_nickname": {
+      "name": "Set vehicle nickname (Canada)",
+      "description": "Rename the vehicle in Kia Connect.",
+      "fields": {
+        "device_id": {
+          "name": "Vehicle",
+          "description": "Target vehicle"
+        },
+        "nickname": {
+          "name": "Nickname",
+          "description": "New vehicle nickname."
+        }
+      }
+    },
+    "save_climate_favourite": {
+      "name": "Save climate preset (Canada)",
+      "description": "Create or update a saved climate preset in Kia Connect.",
+      "fields": {
+        "device_id": {
+          "name": "Vehicle",
+          "description": "Target vehicle"
+        },
+        "name": {
+          "name": "Name",
+          "description": "Preset name (max 20 characters)."
+        },
+        "favourite_id": {
+          "name": "Preset ID",
+          "description": "Existing preset to update; leave empty to create one."
+        },
+        "climate": {
+          "name": "Climate",
+          "description": "Turn the climate system on."
+        },
+        "temperature": {
+          "name": "Temperature",
+          "description": "Cabin temperature in °C."
+        },
+        "duration": {
+          "name": "Duration",
+          "description": "Minutes."
+        },
+        "defrost": {
+          "name": "Defrost",
+          "description": "Front defrost."
+        },
+        "heating": {
+          "name": "Heating",
+          "description": "Heated accessories."
+        },
+        "steering_wheel": {
+          "name": "Steering wheel",
+          "description": "Heated steering wheel level."
+        },
+        "flseat": {
+          "name": "Front left seat",
+          "description": "Seat heat/vent level (Canada encoding: 2 off, 3-5 cool, 6-8 heat)."
+        },
+        "frseat": {
+          "name": "Front right seat",
+          "description": "Seat heat/vent level (Canada encoding: 2 off, 3-5 cool, 6-8 heat)."
+        },
+        "rlseat": {
+          "name": "Rear left seat",
+          "description": "Seat heat/vent level (Canada encoding: 2 off, 3-5 cool, 6-8 heat)."
+        },
+        "rrseat": {
+          "name": "Rear right seat",
+          "description": "Seat heat/vent level (Canada encoding: 2 off, 3-5 cool, 6-8 heat)."
+        }
+      }
+    },
+    "delete_climate_favourite": {
+      "name": "Delete climate preset (Canada)",
+      "description": "Delete a saved climate preset.",
+      "fields": {
+        "device_id": {
+          "name": "Vehicle",
+          "description": "Target vehicle"
+        },
+        "favourite_id": {
+          "name": "Preset ID",
+          "description": "ID shown in the vehicle data sensor (climate_favourites)."
+        }
+      }
+    },
+    "set_default_climate_favourite": {
+      "name": "Set default climate preset (Canada)",
+      "description": "Make a saved climate preset the default.",
+      "fields": {
+        "device_id": {
+          "name": "Vehicle",
+          "description": "Target vehicle"
+        },
+        "favourite_id": {
+          "name": "Preset ID",
+          "description": "ID shown in the vehicle data sensor (climate_favourites)."
+        }
+      }
+    },
+    "set_monthly_report_day": {
+      "name": "Set monthly report day (Canada)",
+      "description": "Day of the month the Monthly Vehicle Report is generated.",
+      "fields": {
+        "device_id": {
+          "name": "Vehicle",
+          "description": "Target vehicle"
+        },
+        "day": {
+          "name": "Day",
+          "description": "1-28."
+        }
+      }
     }
   },
   "entity": {
@@ -622,6 +754,27 @@
           "locking": "Locking",
           "released": "Released"
         }
+      },
+      "next_service_date": {
+        "name": "Next service date"
+      },
+      "last_service_date": {
+        "name": "Last service date"
+      },
+      "connect_subscription_end_date": {
+        "name": "Kia Connect subscription end"
+      },
+      "connect_plan_type": {
+        "name": "Kia Connect plan"
+      },
+      "preferred_dealer_name": {
+        "name": "Preferred dealer"
+      },
+      "unread_message_count": {
+        "name": "Unread Kia messages"
+      },
+      "monthly_report_day": {
+        "name": "Monthly report day"
       }
     },
     "binary_sensor": {
@@ -849,6 +1002,9 @@
       },
       "battery_auxiliary_fail_warning_is_on": {
         "name": "12V Battery Fault"
+      },
+      "digital_key_activated": {
+        "name": "Digital key activated"
       }
     },
     "lock": {

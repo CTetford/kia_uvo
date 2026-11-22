@@ -210,6 +210,14 @@ SENSOR_DESCRIPTIONS: Final[tuple[HyundaiKiaBinarySensorEntityDescription, ...]] 
         entity_category=EntityCategory.DIAGNOSTIC,
     ),
     HyundaiKiaBinarySensorEntityDescription(
+        key="digital_key_activated",
+        translation_key="digital_key_activated",
+        is_on=lambda vehicle: vehicle.digital_key_activated,
+        on_icon="mdi:cellphone-key",
+        off_icon="mdi:cellphone-off",
+        entity_category=EntityCategory.DIAGNOSTIC,
+    ),
+    HyundaiKiaBinarySensorEntityDescription(
         key="smart_key_battery_warning_is_on",
         translation_key="smart_key_battery_warning_is_on",
         is_on=lambda vehicle: vehicle.smart_key_battery_warning_is_on,

@@ -1,6 +1,6 @@
 """Services for Hyundai / Kia Connect integration."""
 
-from datetime import time
+from datetime import date, time
 import logging
 from typing import Any, cast
 
@@ -41,6 +41,13 @@ SERVICE_SET_WINDOWS = "set_windows"
 SERVICE_SET_NAVIGATION = "set_navigation"
 SERVICE_SET_OFF_PEAK_CHARGING = "set_off_peak_charging"
 SERVICE_CAPTURE_SVM_IMAGE = "capture_svm_image"
+# kiaconnect.ca (Canada) account features
+SERVICE_SET_LAST_SERVICE = "set_last_service"
+SERVICE_SET_VEHICLE_NICKNAME = "set_vehicle_nickname"
+SERVICE_SAVE_CLIMATE_FAVOURITE = "save_climate_favourite"
+SERVICE_DELETE_CLIMATE_FAVOURITE = "delete_climate_favourite"
+SERVICE_SET_DEFAULT_CLIMATE_FAVOURITE = "set_default_climate_favourite"
+SERVICE_SET_MONTHLY_REPORT_DAY = "set_monthly_report_day"
 
 SUPPORTED_SERVICES = (
     SERVICE_UPDATE,
@@ -64,6 +71,12 @@ SUPPORTED_SERVICES = (
     SERVICE_SET_NAVIGATION,
     SERVICE_SET_OFF_PEAK_CHARGING,
     SERVICE_CAPTURE_SVM_IMAGE,
+    SERVICE_SET_LAST_SERVICE,
+    SERVICE_SET_VEHICLE_NICKNAME,
+    SERVICE_SAVE_CLIMATE_FAVOURITE,
+    SERVICE_DELETE_CLIMATE_FAVOURITE,
+    SERVICE_SET_DEFAULT_CLIMATE_FAVOURITE,
+    SERVICE_SET_MONTHLY_REPORT_DAY,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -342,6 +355,76 @@ def async_setup_services(hass: HomeAssistant) -> bool:
 
         await coordinator.async_request_svm_capture(vehicle_id)
 
+    def _optional_int(call: ServiceCall, key: str) -> int | None:
+        value = call.data.get(key)
+        return None if value is None else int(value)
+
+    async def async_handle_set_last_service(call: ServiceCall) -> None:
+        coordinator = _get_coordinator_from_device(hass, call)
+        vehicle_id = _get_vehicle_id_from_device(hass, call)
+        service_date = call.data.get("date") or date.today()
+        if isinstance(service_date, str):
+            service_date = date.fromisoformat(service_date)
+        await coordinator.async_ca_account_call(
+            vehicle_id,
+            "set_last_service",
+            float(call.data["odometer"]),
+            service_date,
+        )
+
+    async def async_handle_set_vehicle_nickname(call: ServiceCall) -> None:
+        coordinator = _get_coordinator_from_device(hass, call)
+        vehicle_id = _get_vehicle_id_from_device(hass, call)
+        await coordinator.async_ca_account_call(
+            vehicle_id, "set_vehicle_nickname", str(call.data["nickname"])
+        )
+
+    async def async_handle_save_climate_favourite(call: ServiceCall) -> None:
+        coordinator = _get_coordinator_from_device(hass, call)
+        vehicle_id = _get_vehicle_id_from_device(hass, call)
+        options = ClimateRequestOptions(
+            duration=call.data.get("duration"),
+            set_temp=call.data.get("temperature"),
+            climate=call.data.get("climate"),
+            heating=_optional_int(call, "heating"),
+            defrost=call.data.get("defrost"),
+            front_left_seat=_optional_int(call, "flseat"),
+            front_right_seat=_optional_int(call, "frseat"),
+            rear_left_seat=_optional_int(call, "rlseat"),
+            rear_right_seat=_optional_int(call, "rrseat"),
+            steering_wheel=_optional_int(call, "steering_wheel"),
+        )
+        await coordinator.async_ca_account_call(
+            vehicle_id,
+            "save_climate_favourite",
+            str(call.data["name"]),
+            options,
+            int(call.data.get("favourite_id") or 0),
+        )
+
+    async def async_handle_delete_climate_favourite(call: ServiceCall) -> None:
+        coordinator = _get_coordinator_from_device(hass, call)
+        vehicle_id = _get_vehicle_id_from_device(hass, call)
+        await coordinator.async_ca_account_call(
+            vehicle_id, "delete_climate_favourite", int(call.data["favourite_id"])
+        )
+
+    async def async_handle_set_default_climate_favourite(call: ServiceCall) -> None:
+        coordinator = _get_coordinator_from_device(hass, call)
+        vehicle_id = _get_vehicle_id_from_device(hass, call)
+        await coordinator.async_ca_account_call(
+            vehicle_id,
+            "set_default_climate_favourite",
+            int(call.data["favourite_id"]),
+        )
+
+    async def async_handle_set_monthly_report_day(call: ServiceCall) -> None:
+        coordinator = _get_coordinator_from_device(hass, call)
+        vehicle_id = _get_vehicle_id_from_device(hass, call)
+        await coordinator.async_ca_account_call(
+            vehicle_id, "set_monthly_report_day", int(call.data["day"])
+        )
+
     services = {
         SERVICE_FORCE_UPDATE: async_handle_force_update,
         SERVICE_UPDATE: async_handle_update,
@@ -364,6 +447,12 @@ def async_setup_services(hass: HomeAssistant) -> bool:
         SERVICE_SET_NAVIGATION: async_handle_set_navigation,
         SERVICE_SET_OFF_PEAK_CHARGING: async_handle_set_off_peak_charging,
         SERVICE_CAPTURE_SVM_IMAGE: async_handle_capture_svm_image,
+        SERVICE_SET_LAST_SERVICE: async_handle_set_last_service,
+        SERVICE_SET_VEHICLE_NICKNAME: async_handle_set_vehicle_nickname,
+        SERVICE_SAVE_CLIMATE_FAVOURITE: async_handle_save_climate_favourite,
+        SERVICE_DELETE_CLIMATE_FAVOURITE: async_handle_delete_climate_favourite,
+        SERVICE_SET_DEFAULT_CLIMATE_FAVOURITE: async_handle_set_default_climate_favourite,
+        SERVICE_SET_MONTHLY_REPORT_DAY: async_handle_set_monthly_report_day,
     }
 
     for service in SUPPORTED_SERVICES:
